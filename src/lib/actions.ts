@@ -99,6 +99,29 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
   return task;
 }
 
+export async function updateTask(
+  taskId: string,
+  updates: Partial<Pick<Task,
+    'title' | 'domain_id' | 'size' | 'type' | 'importance_manual' |
+    'deadline' | 'deadline_confidence' | 'fog_level' | 'next_action' | 'snoozed_until'
+  >>,
+): Promise<void> {
+  const profile = await getProfile();
+  const domains = profile?.domains ?? [];
+
+  await db.tasks.update(taskId, updates);
+
+  if ('importance_manual' in updates || 'deadline' in updates || 'deadline_confidence' in updates || 'domain_id' in updates) {
+    const task = await db.tasks.get(taskId);
+    if (task) {
+      const newImportance = calculateImportance(task, domains);
+      await db.tasks.update(taskId, { importance: newImportance });
+    }
+  }
+
+  await logEvent('task_updated', { task_id: taskId, fields: Object.keys(updates) });
+}
+
 export async function completeTask(taskId: string): Promise<void> {
   const now = new Date().toISOString();
   await db.tasks.update(taskId, {
@@ -106,13 +129,62 @@ export async function completeTask(taskId: string): Promise<void> {
     completed_at: now,
   });
 
-  await logEvent('task_completed', {
-    task_id: taskId,
-    method: 'tap',
+  await logEvent('task_completed', { task_id: taskId, method: 'tap' });
+  await recalculateAllImportance();
+}
+
+export async function snoozeTask(taskId: string, until: string): Promise<void> {
+  await db.tasks.update(taskId, { snoozed_until: until });
+  await logEvent('task_updated', { task_id: taskId, field: 'snoozed_until', value: until });
+}
+
+export async function skipTask(taskId: string): Promise<void> {
+  await db.tasks.update(taskId, { status: 'someday_parked' as TaskStatus });
+  await logEvent('task_updated', { task_id: taskId, field: 'status', value: 'someday_parked' });
+}
+
+export async function cancelTask(taskId: string): Promise<void> {
+  await db.tasks.update(taskId, { status: 'cancelled' as TaskStatus });
+  await logEvent('task_updated', { task_id: taskId, field: 'status', value: 'cancelled' });
+}
+
+export async function reactivateTask(taskId: string): Promise<void> {
+  await db.tasks.update(taskId, {
+    status: 'active' as TaskStatus,
+    completed_at: null,
+    snoozed_until: null,
+  });
+  await logEvent('task_updated', { task_id: taskId, field: 'status', value: 'active' });
+  await recalculateAllImportance();
+}
+
+export async function addSubtask(parentId: string, title: string): Promise<Task> {
+  const parent = await db.tasks.get(parentId);
+  const subtask = await createTask({
+    raw_capture: title,
+    source: 'manual',
+    domain_id: parent?.domain_id ?? null,
+    deadline: null,
+    deadline_confidence: null,
+    size: 'moment',
   });
 
-  // Recalculate importance for tasks that depended on this one
-  await recalculateAllImportance();
+  await db.tasks.update(subtask.id, { parent_task_id: parentId });
+  await db.tasks.update(parentId, {
+    subtask_ids: [...(parent?.subtask_ids ?? []), subtask.id],
+  });
+
+  return subtask;
+}
+
+export async function deleteSubtask(parentId: string, subtaskId: string): Promise<void> {
+  const parent = await db.tasks.get(parentId);
+  if (parent) {
+    await db.tasks.update(parentId, {
+      subtask_ids: parent.subtask_ids.filter(id => id !== subtaskId),
+    });
+  }
+  await db.tasks.delete(subtaskId);
 }
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus): Promise<void> {
