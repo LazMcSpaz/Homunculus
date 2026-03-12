@@ -1,0 +1,54 @@
+.navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--parchment-deep);
+  border-top: 1px solid var(--parchment-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: var(--z-nav);
+  padding: 0 var(--space-md);
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--parchment-ink-faint);
+  transition: color var(--transition-fast);
+  text-decoration: none;
+}
+
+.navItem:hover {
+  color: var(--parchment-ink-mid);
+}
+
+.navItemActive {
+  color: var(--gold);
+}
+
+.navItemActive:hover {
+  color: var(--gold);
+}
+
+.navIcon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.navLabel {
+  font-family: var(--font-fell), serif;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Spacer for capture button */
+.navSpacer {
+  width: 52px;
+}
