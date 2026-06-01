@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import type { Task, Domain, ImportanceLevel } from '@/lib/types';
+import type { Task, Domain, ImportanceLevel, TaskSize, TaskType, FogLevel } from '@/lib/types';
 import styles from './Tasks.module.css';
 
 const IMPORTANCE_ORDER: Record<ImportanceLevel, number> = {
@@ -14,12 +14,30 @@ const IMPORTANCE_ORDER: Record<ImportanceLevel, number> = {
   low: 3,
 };
 
+interface Filters {
+  importance: ImportanceLevel | null;
+  size: TaskSize | null;
+  type: TaskType | null;
+  fog: FogLevel | null;
+  hasDeadline: boolean | null;
+  domain_id: string | null;
+  showCompleted: boolean;
+}
+
+const DEFAULT_FILTERS: Filters = {
+  importance: null,
+  size: null,
+  type: null,
+  fog: null,
+  hasDeadline: null,
+  domain_id: null,
+  showCompleted: false,
+};
+
 function sortTasks(tasks: Task[]): Task[] {
   return [...tasks].sort((a, b) => {
-    // By importance first
     const impDiff = IMPORTANCE_ORDER[a.importance] - IMPORTANCE_ORDER[b.importance];
     if (impDiff !== 0) return impDiff;
-    // Then by deadline proximity
     if (a.deadline && b.deadline) return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
     if (a.deadline) return -1;
     if (b.deadline) return 1;
@@ -40,13 +58,36 @@ function formatDeadline(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function applyFilters(tasks: Task[], filters: Filters): Task[] {
+  return tasks.filter(t => {
+    if (filters.importance && t.importance !== filters.importance) return false;
+    if (filters.size && t.size !== filters.size) return false;
+    if (filters.type && t.type !== filters.type) return false;
+    if (filters.fog && t.fog_level !== filters.fog) return false;
+    if (filters.hasDeadline === true && !t.deadline) return false;
+    if (filters.hasDeadline === false && t.deadline) return false;
+    if (filters.domain_id && t.domain_id !== filters.domain_id) return false;
+    return true;
+  });
+}
+
+function hasActiveFilters(filters: Filters): boolean {
+  return filters.importance !== null || filters.size !== null || filters.type !== null ||
+    filters.fog !== null || filters.hasDeadline !== null || filters.domain_id !== null;
+}
+
 export default function TaskList() {
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<'domain' | 'importance'>('domain');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
 
-  const tasks = useLiveQuery(
-    () => db.tasks.where('status').anyOf('active', 'in_progress').toArray(),
-  );
+  const tasks = useLiveQuery(() => {
+    if (filters.showCompleted) {
+      return db.tasks.toArray();
+    }
+    return db.tasks.where('status').anyOf('active', 'in_progress').toArray();
+  }, [filters.showCompleted]);
 
   const profile = useLiveQuery(() => db.userProfile.toArray().then(p => p[0]));
   const domains = profile?.domains ?? [];
@@ -56,24 +97,47 @@ export default function TaskList() {
     return map;
   }, [domains]);
 
+  const toggleFilter = useCallback(<K extends keyof Filters>(key: K, value: Filters[K]) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: prev[key] === value ? null : value,
+    }));
+  }, []);
+
   if (!tasks) return null;
 
-  // Filter by search
-  const filtered = search
-    ? tasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase()))
+  // Search
+  const searched = search
+    ? tasks.filter(t => t.title.toLowerCase().includes(search.toLowerCase()) ||
+        t.raw_capture.toLowerCase().includes(search.toLowerCase()))
     : tasks;
 
+  // Apply filters
+  const filtered = applyFilters(searched, filters);
+
   // Separate someday-parked
-  const activeTasks = filtered.filter(t => t.status !== 'someday_parked');
+  const activeTasks = filtered.filter(t => t.status !== 'someday_parked' && t.status !== 'cancelled');
   const sorted = sortTasks(activeTasks);
+
+  const activeFilterCount = [filters.importance, filters.size, filters.type, filters.fog, filters.hasDeadline, filters.domain_id].filter(v => v !== null).length;
 
   if (sortMode === 'importance') {
     return (
       <div className={styles.container}>
         <Header sortMode={sortMode} onToggleSort={() => setSortMode('domain')} />
         <SearchBar value={search} onChange={setSearch} />
+        <FilterBar
+          show={showFilters}
+          onToggle={() => setShowFilters(!showFilters)}
+          filters={filters}
+          onToggleFilter={toggleFilter}
+          domains={domains}
+          activeCount={activeFilterCount}
+          onClear={() => setFilters(DEFAULT_FILTERS)}
+          onToggleCompleted={() => setFilters(prev => ({ ...prev, showCompleted: !prev.showCompleted }))}
+        />
         {sorted.length === 0 ? (
-          <EmptyState />
+          <EmptyState hasFilters={hasActiveFilters(filters)} />
         ) : (
           sorted.map(task => (
             <TaskCard key={task.id} task={task} domain={domainMap.get(task.domain_id ?? '')} />
@@ -100,8 +164,18 @@ export default function TaskList() {
     <div className={styles.container}>
       <Header sortMode={sortMode} onToggleSort={() => setSortMode('importance')} />
       <SearchBar value={search} onChange={setSearch} />
+      <FilterBar
+        show={showFilters}
+        onToggle={() => setShowFilters(!showFilters)}
+        filters={filters}
+        onToggleFilter={toggleFilter}
+        domains={domains}
+        activeCount={activeFilterCount}
+        onClear={() => setFilters(DEFAULT_FILTERS)}
+        onToggleCompleted={() => setFilters(prev => ({ ...prev, showCompleted: !prev.showCompleted }))}
+      />
       {sorted.length === 0 ? (
-        <EmptyState />
+        <EmptyState hasFilters={hasActiveFilters(filters)} />
       ) : (
         <>
           {domains.map(domain => {
@@ -160,6 +234,113 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
   );
 }
 
+function FilterBar({
+  show,
+  onToggle,
+  filters,
+  onToggleFilter,
+  domains,
+  activeCount,
+  onClear,
+  onToggleCompleted,
+}: {
+  show: boolean;
+  onToggle: () => void;
+  filters: Filters;
+  onToggleFilter: <K extends keyof Filters>(key: K, value: Filters[K]) => void;
+  domains: Domain[];
+  activeCount: number;
+  onClear: () => void;
+  onToggleCompleted: () => void;
+}) {
+  return (
+    <>
+      <div style={{ display: 'flex', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)', alignItems: 'center' }}>
+        <button className={styles.filterToggle} onClick={onToggle}>
+          Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+        </button>
+        {activeCount > 0 && (
+          <button className={styles.filterToggle} onClick={onClear}>Clear</button>
+        )}
+        <button
+          className={`${styles.filterToggle} ${filters.showCompleted ? styles.filterChipActive : ''}`}
+          onClick={onToggleCompleted}
+          style={{ marginLeft: 'auto' }}
+        >
+          {filters.showCompleted ? 'Hide done' : 'Show done'}
+        </button>
+      </div>
+      {show && (
+        <div className={styles.filterPanel}>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterGroupLabel}>Importance</span>
+            {(['critical', 'high', 'medium', 'low'] as ImportanceLevel[]).map(i => (
+              <button
+                key={i}
+                className={`${styles.filterChip} ${filters.importance === i ? styles.filterChipActive : ''}`}
+                onClick={() => onToggleFilter('importance', i)}
+              >{i}</button>
+            ))}
+          </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterGroupLabel}>Size</span>
+            {(['moment', 'project', 'someday'] as TaskSize[]).map(s => (
+              <button
+                key={s}
+                className={`${styles.filterChip} ${filters.size === s ? styles.filterChipActive : ''}`}
+                onClick={() => onToggleFilter('size', s)}
+              >{s}</button>
+            ))}
+          </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterGroupLabel}>Type</span>
+            {(['obligation', 'investment', 'enjoyment'] as TaskType[]).map(t => (
+              <button
+                key={t}
+                className={`${styles.filterChip} ${filters.type === t ? styles.filterChipActive : ''}`}
+                onClick={() => onToggleFilter('type', t)}
+              >{t}</button>
+            ))}
+          </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterGroupLabel}>Fog</span>
+            {(['clear', 'hazy', 'foggy'] as FogLevel[]).map(f => (
+              <button
+                key={f}
+                className={`${styles.filterChip} ${filters.fog === f ? styles.filterChipActive : ''}`}
+                onClick={() => onToggleFilter('fog', f)}
+              >{f}</button>
+            ))}
+          </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterGroupLabel}>Deadline</span>
+            <button
+              className={`${styles.filterChip} ${filters.hasDeadline === true ? styles.filterChipActive : ''}`}
+              onClick={() => onToggleFilter('hasDeadline', true)}
+            >Has deadline</button>
+            <button
+              className={`${styles.filterChip} ${filters.hasDeadline === false ? styles.filterChipActive : ''}`}
+              onClick={() => onToggleFilter('hasDeadline', false)}
+            >No deadline</button>
+          </div>
+          {domains.length > 0 && (
+            <div className={styles.filterGroup}>
+              <span className={styles.filterGroupLabel}>Domain</span>
+              {domains.map(d => (
+                <button
+                  key={d.id}
+                  className={`${styles.filterChip} ${filters.domain_id === d.id ? styles.filterChipActive : ''}`}
+                  onClick={() => onToggleFilter('domain_id', d.id)}
+                >{d.name}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 function TaskCard({ task, domain }: { task: Task; domain?: Domain }) {
   const importanceClass =
     task.importance === 'critical' ? styles.taskCardCritical :
@@ -175,8 +356,14 @@ function TaskCard({ task, domain }: { task: Task; domain?: Domain }) {
             <span className={`${styles.chip} ${styles.chipImportance}`}>{task.importance}</span>
           )}
           {task.size && <span className={styles.chip}>{task.size}</span>}
+          {task.fog_level !== 'clear' && (
+            <span className={styles.chip}>{task.fog_level}</span>
+          )}
           {task.deadline && (
             <span className={styles.deadline}>{formatDeadline(task.deadline)}</span>
+          )}
+          {task.subtask_ids.length > 0 && (
+            <span className={styles.chip}>{task.subtask_ids.length} sub</span>
           )}
         </div>
       </div>
@@ -184,11 +371,15 @@ function TaskCard({ task, domain }: { task: Task; domain?: Domain }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ hasFilters }: { hasFilters: boolean }) {
   return (
     <div className={styles.empty}>
-      <p className={styles.emptyText}>No tasks yet.</p>
-      <p className={styles.emptyHint}>Use the capture button to add one</p>
+      <p className={styles.emptyText}>
+        {hasFilters ? 'No tasks match these filters.' : 'No tasks yet.'}
+      </p>
+      <p className={styles.emptyHint}>
+        {hasFilters ? 'Try adjusting your filters' : 'Use the capture button to add one'}
+      </p>
     </div>
   );
 }
