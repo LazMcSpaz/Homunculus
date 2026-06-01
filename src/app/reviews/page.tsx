@@ -59,7 +59,10 @@ export default function ReviewsPage() {
             slipped, and which assumptions still hold. It leaves your task list in a
             more accurate state than it started.
           </p>
-          <span className={styles.soon}>Coming soon</span>
+          <Link href="/review" className={styles.action}>
+            Start weekly review
+            <span className={styles.actionHint}>A short conversation to recalibrate</span>
+          </Link>
         </div>
       </main>
 
