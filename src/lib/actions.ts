@@ -263,6 +263,14 @@ export async function updateProfile(updates: Partial<UserProfile>): Promise<void
   }
 }
 
+export async function setMode(mode: OperatingMode): Promise<void> {
+  const profile = await getProfile();
+  if (!profile || profile.operating_mode === mode) return;
+  const from_mode = profile.operating_mode;
+  await db.userProfile.update(profile.id, { operating_mode: mode });
+  await logEvent('mode_changed', { from_mode, to_mode: mode });
+}
+
 export async function hasProfile(): Promise<boolean> {
   const count = await db.userProfile.count();
   return count > 0;

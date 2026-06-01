@@ -150,6 +150,7 @@ export type InteractionEventType =
   | 'notification_ignored'
   | 'question_answered'
   | 'question_dismissed'
+  | 'prioritisation_call'
   | 'advisor_session_started'
   | 'advisor_session_ended'
   | 'weekly_review_completed'
