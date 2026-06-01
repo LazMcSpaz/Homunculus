@@ -15,7 +15,8 @@ Medieval-classical aesthetic: warm parchment tones, wax-seal red accents, gold h
 - **Next.js 15** — React framework with app router
 - **React 18** + **TypeScript**
 - **Dexie** (IndexedDB) — all data lives on-device; nothing is stored on a server
-- **Claude Haiku 4.5** — powers prioritization ("what should I focus on next?"), background enrichment of raw captures, and multi-turn advisor sessions, via server-side proxies (the API key never reaches the browser). Falls back to native behavior when unavailable. Weekly review is planned.
+- **Claude Haiku 4.5** — powers prioritization, background enrichment, advisor sessions, the weekly review, and mode-transition briefs, all via server-side proxies (the API key never reaches the browser). Every call falls back to native behavior when unavailable.
+- **Native intelligence layer** — on-device daily pattern detection (active hours, momentum streak, avoidance signals) and a clarifying-question queue, with zero API cost.
 - **PWA** — installable to your home screen, runs full-screen, works offline (the app shell is cached; your data is already local)
 - **Cloudflare Workers** — deployed via the [OpenNext](https://opennext.js.org/cloudflare) adapter
 
@@ -70,8 +71,17 @@ It launches full-screen with the wax-seal icon, like a native app.
 ### Home & Counsel
 The home screen shows your active task count, a per-domain overview, and the **Counsel** card. Tap *"What should I focus on next?"* and Homunculus calls Claude to return a single recommendation (open mode) or an attention queue of what needs your input (crunch mode), with a plain-spoken rationale. Results are cached for 4 hours and re-used until something material changes, keeping AI cost low. If the AI is unavailable, it falls back silently to native importance ranking.
 
-### Operating Mode
-Toggle between **Open** and **Crunch** mode in one tap from the home header (or from More). Open mode is for "what's the one next thing"; crunch mode surfaces the queue of tasks needing attention.
+### Operating Mode + Transition Brief
+Toggle between **Open** and **Crunch** mode in one tap from the home header (or from More). Open mode is for "what's the one next thing"; crunch mode surfaces the queue of tasks needing attention. On a switch, Homunculus shows a short **transition brief** orienting you to the mode you're entering — what's accumulated, what matters first, and a specific first action.
+
+### Clarifying Questions
+The questions enrichment generates surface gently at app open — at most two per session, oldest first, gated to high-importance tasks or questions older than a week. Answer or dismiss inline; answers are recorded on the task.
+
+### Weekly Review
+A short conversation (not a report) from the Reviews tab: Homunculus leads with what got done, surfaces genuine attention gaps one at a time (skipping the beat entirely if there are none), and checks a few assumptions — writing any confirmed corrections back to your tasks as you go.
+
+### Momentum
+A daily on-device pass over your interaction history infers your active hours, completion streak, and avoidance signals (zero API cost). Your current streak shows on the home header.
 
 ### Advisor Sessions
 When a task is foggy and you can't picture how to proceed, tap **"talk it through"** (on the task, in the Reviews tab, or from a Counsel fog flag) to open a multi-turn conversation. Homunculus asks one question at a time, helps you think rather than thinking for you, and ends the moment the path is clear — writing the agreed **next action**, **suggested steps**, and any new clarifying questions back onto the task.
@@ -121,11 +131,14 @@ Roughly in order of priority:
 
 - ~~**AI prioritization** — "What should I focus on next?" Single recommendation in open mode, attention queue in crunch mode~~ ✅ Done
 - ~~**Background enrichment** — Claude summarizes raw captures, detects fog, suggests subtasks~~ ✅ Done (currently a single batched Messages-API call triggered on capture / app open; moving to the async Batch API for ~50% cost savings is a future optimization)
-- **Clarifying question queue** — AI-generated questions surfaced at app open, max 2 per session
-- **Native intelligence layer** — daily pattern detection (active hours, momentum, avoidance signals), notification engine, all on-device with zero API cost
+- ~~**Clarifying question queue** — AI-generated questions surfaced at app open, max 2 per session~~ ✅ Done
+- ~~**Native intelligence layer** — daily pattern detection (active hours, momentum, avoidance signals), on-device with zero API cost~~ ✅ Done (the notification engine still needs web push — see below)
 - ~~**Advisor sessions** — multi-turn conversation to break down foggy tasks~~ ✅ Done
-- **Weekly review** — accomplishments, attention gaps, assumption checks
-- **Design polish** — parchment noise texture, ornamental dividers, mascot asset slots, animations
+- ~~**Weekly review** — accomplishments, attention gaps, assumption checks~~ ✅ Done
+- ~~**Mode transition brief** — forward-facing orientation when switching operating mode~~ ✅ Done
+- **Push notifications** — web-push task reminders, clarifying-question nudges, and weekly-review prompts. Not yet built: on iOS this requires the PWA to be installed to the home screen, and needs VAPID keys + a push subscription store.
+- **Design polish** — parchment noise texture, ornamental dividers, mascot asset slots, animations (largely in place; ongoing)
+- **Batch enrichment** — move background enrichment to the async Batch API for ~50% cost savings
 
 ## Project Structure
 
@@ -135,28 +148,35 @@ src/
 │   ├── layout.tsx          # Root layout: fonts, PWA meta, viewport, SW registration
 │   ├── page.tsx            # Home (Counsel + overview + mode toggle)
 │   ├── setup/page.tsx      # Onboarding
-│   ├── reviews/page.tsx    # Reviews (weekly review / advisor — coming soon)
+│   ├── reviews/page.tsx    # Reviews hub (advisor list + weekly review entry)
+│   ├── review/page.tsx     # Weekly review conversation
 │   ├── more/page.tsx       # Settings, profile, data reset
 │   ├── advisor/[id]/       # Multi-turn advisor conversation for a task
 │   ├── api/
 │   │   ├── _anthropic.ts   # Shared server-side Claude helper (key stays off-device)
 │   │   ├── prioritise/     # "What should I focus on next?" call
 │   │   ├── enrich/         # Background enrichment of raw captures
-│   │   └── advisor/        # Advisor session turns
+│   │   ├── advisor/        # Advisor session turns
+│   │   ├── weekly-review/  # Weekly review turns
+│   │   └── mode-brief/     # Mode transition brief
 │   └── tasks/
 │       ├── page.tsx        # Task list
 │       └── [id]/page.tsx   # Task detail
 ├── components/
 │   ├── advisor/            # Advisor conversation UI
+│   ├── review/             # Weekly review conversation UI
 │   ├── capture/            # Capture overlay
-│   ├── home/               # Counsel card, ModeToggle
+│   ├── home/               # Counsel, ModeToggle, QuestionPrompt, ModeBriefOverlay
 │   ├── layout/             # NavBar, CaptureButton, ServiceWorker, ComingSoon
 │   ├── setup/              # Setup flow steps
 │   └── tasks/              # TaskList, TaskDetail
 └── lib/
-    ├── actions.ts          # All task/profile CRUD + event logging + setMode
+    ├── actions.ts          # Task/profile CRUD + event logging + setMode + advisor write-back
     ├── ai.ts               # Prioritization: context assembly, cache, fallback
     ├── enrich.ts           # Background enrichment trigger + write-back
+    ├── questions.ts        # Clarifying-question queue (gating, answer/dismiss)
+    ├── intelligence.ts     # Daily on-device pattern detection
+    ├── modeBrief.ts        # Mode transition brief request + fallback
     ├── db.ts               # Dexie (IndexedDB) schema
     ├── importance.ts       # Native importance calculation
     └── types.ts            # TypeScript types and enums
