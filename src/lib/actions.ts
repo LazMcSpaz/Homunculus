@@ -192,6 +192,44 @@ export async function dismissSuggestedSubtasks(parentId: string): Promise<void> 
   await db.tasks.update(parentId, { suggested_subtasks: [] });
 }
 
+// ─── Advisor session write-back ──────────────────────────
+
+export async function applyAdvisorOutcome(
+  taskId: string,
+  outcome: { next_action?: string; suggested_subtasks?: string[]; new_questions?: string[] },
+): Promise<void> {
+  const task = await db.tasks.get(taskId);
+  if (!task) return;
+  const updates: Partial<Task> = {};
+
+  if (outcome.next_action && outcome.next_action !== task.next_action) {
+    updates.next_action = outcome.next_action;
+  }
+
+  if (Array.isArray(outcome.suggested_subtasks) && outcome.suggested_subtasks.length > 0) {
+    // Merge with any existing suggestions, de-duplicated, capped.
+    const merged = Array.from(
+      new Set([...(task.suggested_subtasks ?? []), ...outcome.suggested_subtasks.filter((s) => typeof s === 'string')]),
+    ).slice(0, 8);
+    updates.suggested_subtasks = merged;
+  }
+
+  if (Array.isArray(outcome.new_questions) && outcome.new_questions.length > 0) {
+    const now = new Date().toISOString();
+    const existing = new Set(task.clarification_history.map((q) => q.question));
+    const additions = outcome.new_questions
+      .filter((q) => typeof q === 'string' && !existing.has(q))
+      .map((q) => ({ question: q, answer: null, asked_at: now, answered_at: null }));
+    if (additions.length > 0) {
+      updates.clarification_history = [...task.clarification_history, ...additions];
+    }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await db.tasks.update(taskId, updates);
+  }
+}
+
 export async function deleteSubtask(parentId: string, subtaskId: string): Promise<void> {
   const parent = await db.tasks.get(parentId);
   if (parent) {

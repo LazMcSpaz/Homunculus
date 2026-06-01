@@ -806,3 +806,24 @@
   background: var(--accent);
   color: #f5edd8;
 }
+
+/* ── Advisor entry button ── */
+.advisorBtn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: var(--space-md);
+  margin-top: var(--space-md);
+  background: var(--surface-card);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-md);
+  font-family: var(--font-cormorant), serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--accent);
+  transition: background var(--transition-fast);
+}
+
+.advisorBtn:hover {
+  background: var(--gold-faint);
+}

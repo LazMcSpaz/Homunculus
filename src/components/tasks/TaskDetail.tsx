@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
@@ -346,6 +347,15 @@ export default function TaskDetail({ taskId }: Props) {
           </div>
         )}
       </div>
+
+      {/* Advisor entry — talk a foggy task through with Homunculus */}
+      {!isTerminal && (
+        <Link href={`/advisor/${taskId}`} className={styles.advisorBtn}>
+          {task.fog_level === 'clear'
+            ? 'Talk it through with the advisor'
+            : 'This feels foggy — talk it through'}
+        </Link>
+      )}
 
       <div className={styles.divider} />
 

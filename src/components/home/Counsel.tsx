@@ -108,10 +108,12 @@ export default function Counsel({ mode }: { mode: OperatingMode }) {
           )}
 
           {result.flag_for_advisor && result.flag_for_advisor.length > 0 && (
-            <div className={styles.advisorFlag}>
-              {result.flag_for_advisor.length === 1 ? 'This one looks foggy' : 'A few of these look foggy'} —
-              an advisor session could clear the path. (Coming soon.)
-            </div>
+            <Link href={`/advisor/${result.flag_for_advisor[0]}`} className={styles.advisorFlag}>
+              {result.flag_for_advisor.length === 1
+                ? `"${titleFor(result.flag_for_advisor[0])}" looks foggy`
+                : 'A few of these look foggy'}{' '}
+              — talk it through with the advisor &rarr;
+            </Link>
           )}
 
           <div className={styles.metaRow}>

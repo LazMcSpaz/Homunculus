@@ -31,11 +31,23 @@ export interface AnthropicCallResult {
   text: string;
 }
 
-/** Make a single Messages API call and return the concatenated text content. */
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * Make a single Messages API call and return the concatenated text content.
+ * Pass either a single `userContent` string or a full `messages` array (for
+ * multi-turn conversations like advisor sessions).
+ */
 export async function callAnthropic(
   apiKey: string,
-  opts: { system: SystemBlock[]; userContent: string; maxTokens?: number },
+  opts: { system: SystemBlock[]; userContent?: string; messages?: Message[]; maxTokens?: number },
 ): Promise<AnthropicCallResult> {
+  const messages: Message[] =
+    opts.messages ?? [{ role: 'user', content: opts.userContent ?? '' }];
+
   const res = await fetch(ANTHROPIC_URL, {
     method: 'POST',
     headers: {
@@ -47,7 +59,7 @@ export async function callAnthropic(
       model: HAIKU,
       max_tokens: opts.maxTokens ?? 1024,
       system: opts.system,
-      messages: [{ role: 'user', content: opts.userContent }],
+      messages,
     }),
   });
 
