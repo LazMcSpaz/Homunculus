@@ -6,20 +6,26 @@ adapter. This guide sets up **automatic deploys on every push to `main`** using
 
 ## One-time setup
 
-### 1. Set the Anthropic API key as a Worker secret
+### 1. Set the Anthropic API key as a Worker secret (runtime)
 
-The AI Counsel and background enrichment calls run server-side; the key never
-reaches the browser. Set it once — secrets persist across deploys:
+The AI Counsel, enrichment, and advisor calls run server-side; the key is read
+at **runtime** via `getCloudflareContext().env`, so it must be a **runtime Worker
+secret** (not a build variable). Secrets persist across deploys — Wrangler won't
+wipe them.
 
-```bash
-npx wrangler login
-npx wrangler secret put ANTHROPIC_API_KEY
-# paste your key (sk-ant-...) when prompted
-```
+Set it either in the dashboard or via the CLI:
 
-> If the Worker doesn't exist yet, run `npm run deploy` once first to create it,
-> then set the secret. (You can also add the secret in the dashboard under the
-> Worker's **Settings → Variables and Secrets**.)
+- **Dashboard:** the `homunculus` Worker → **Settings → Variables and Secrets →
+  Add → type "Secret"**, name `ANTHROPIC_API_KEY`, paste your `sk-ant-...` value →
+  **Deploy**.
+- **CLI:**
+  ```bash
+  npx wrangler login
+  npx wrangler secret put ANTHROPIC_API_KEY
+  # paste your key when prompted
+  ```
+
+Without it, the app still works — AI calls fall back to native behavior.
 
 ### 2. Connect the repo to Workers Builds
 
@@ -33,10 +39,8 @@ In the [Cloudflare dashboard](https://dash.cloudflare.com):
    - **Build command:** `npm run build:cf`
    - **Deploy command:** `npx wrangler deploy`
    - **Root directory:** `/` (repo root)
-4. Under **Build variables and secrets**, add `ANTHROPIC_API_KEY` as a secret so
-   it's available during the build/deploy. (This is separate from the runtime
-   Worker secret in step 1; Workers Builds needs it at deploy time.)
-5. Save.
+4. Save. (No build variables are required — the API key is a *runtime* Worker
+   secret from step 1, not a build-time variable.)
 
 That's it. **Every push to `main` now builds and deploys automatically.** Pull
 requests get preview deploys too.

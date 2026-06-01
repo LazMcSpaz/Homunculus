@@ -2,8 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "homunculus",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2025-09-23",
+  "compatibility_date": "2025-11-01",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
