@@ -68,7 +68,7 @@ export default function Counsel({ mode }: { mode: OperatingMode }) {
       {loading && <p className={styles.spinner}>Consulting&hellip;</p>}
 
       {result && !loading && (
-        <>
+        <div className="rise">
           {result.mode === 'open' && (
             <>
               <Link href={`/tasks/${result.recommendation.task_id}`} className={styles.recTask}>
@@ -122,7 +122,7 @@ export default function Counsel({ mode }: { mode: OperatingMode }) {
               Ask again
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

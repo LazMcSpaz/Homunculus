@@ -211,9 +211,22 @@ input, textarea {
   border-radius: 3px;
 }
 
-/* App shell padding for bottom nav */
+/* App shell padding for bottom nav + device safe areas (notch / home indicator) */
 main {
-  padding-bottom: 80px;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
   position: relative;
   z-index: 1;
+}
+
+/* Fade-in for AI counsel results and surfaced content */
+@keyframes homunculus-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: homunculus-rise var(--transition-normal) ease both;
+  }
 }
