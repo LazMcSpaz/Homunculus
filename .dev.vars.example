@@ -1,0 +1,4 @@
+# Copy to `.dev.vars` for local `npm run preview`, or set as a Worker secret in
+# production with `npx wrangler secret put ANTHROPIC_API_KEY`.
+# `.dev.vars` is gitignored — never commit a real key.
+ANTHROPIC_API_KEY=sk-ant-...

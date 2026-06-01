@@ -12,10 +12,12 @@ Medieval-classical aesthetic: warm parchment tones, wax-seal red accents, gold h
 
 ## Tech Stack
 
-- **Next.js 14** — React framework with app router
+- **Next.js 15** — React framework with app router
 - **React 18** + **TypeScript**
-- **Dexie** (IndexedDB) — all data lives on-device, nothing leaves your browser
-- **Claude AI** (planned) — Haiku for prioritization, task enrichment, and advisor sessions at ~$1.60/month
+- **Dexie** (IndexedDB) — all data lives on-device; nothing is stored on a server
+- **Claude Haiku 4.5** — powers prioritization ("what should I focus on next?") and background enrichment of raw captures, via server-side proxies (the API key never reaches the browser). Falls back to native behavior when unavailable. Advisor sessions and weekly review are planned.
+- **PWA** — installable to your home screen, runs full-screen, works offline (the app shell is cached; your data is already local)
+- **Cloudflare Workers** — deployed via the [OpenNext](https://opennext.js.org/cloudflare) adapter
 
 ## Getting Started
 
@@ -35,26 +37,44 @@ npm run dev
 
 Open **http://localhost:3000** in your browser. You'll see the setup flow on first visit.
 
-### Access on Your Phone
+To exercise the Claude prioritization call locally, copy `.dev.vars.example` to `.dev.vars`, add your `ANTHROPIC_API_KEY`, and run `npm run preview` (which runs the app in the Cloudflare Workers runtime). Without a key, the app still works — it falls back to native importance ranking.
 
-#### Same Wi-Fi (quickest)
+### Deploy to Cloudflare (accessible anywhere)
 
-1. Find your computer's local IP:
-   - **Mac:** System Settings > Wi-Fi > Details > IP Address
-   - **Windows:** Open Command Prompt, run `ipconfig`, look for IPv4 Address
-2. Start the dev server on all interfaces:
+The app deploys to Cloudflare Workers via the OpenNext adapter.
+
+1. Install the [Wrangler](https://developers.cloudflare.com/workers/wrangler/) CLI and authenticate: `npx wrangler login`
+2. Set your Anthropic API key as a Worker secret (kept off-device, never committed):
    ```bash
-   npm run dev -- -H 0.0.0.0
+   npx wrangler secret put ANTHROPIC_API_KEY
    ```
-3. On your phone, open `http://<your-ip>:3000`
+3. Build and deploy:
+   ```bash
+   npm run deploy
+   ```
+   You'll get a URL like `https://homunculus.<your-subdomain>.workers.dev`.
 
-#### Deploy to Vercel (accessible anywhere)
+You can also connect the GitHub repo in the Cloudflare dashboard for automatic deploys ([Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/)) — set `ANTHROPIC_API_KEY` as a build secret there.
 
-1. Sign up at [vercel.com](https://vercel.com) with your GitHub account
-2. Import the Homunculus repo
-3. Deploy — you'll get a URL like `homunculus-xyz.vercel.app`
+### Install on Your Phone
+
+Once it's deployed (or while running on the same Wi-Fi via `npm run dev -- -H 0.0.0.0` and visiting `http://<your-computer-ip>:3000`):
+
+- **iOS Safari:** Share → *Add to Home Screen*
+- **Android Chrome:** ⋮ menu → *Install app* / *Add to Home Screen*
+
+It launches full-screen with the wax-seal icon, like a native app.
 
 ## Current Features
+
+### Home & Counsel
+The home screen shows your active task count, a per-domain overview, and the **Counsel** card. Tap *"What should I focus on next?"* and Homunculus calls Claude to return a single recommendation (open mode) or an attention queue of what needs your input (crunch mode), with a plain-spoken rationale. Results are cached for 4 hours and re-used until something material changes, keeping AI cost low. If the AI is unavailable, it falls back silently to native importance ranking.
+
+### Operating Mode
+Toggle between **Open** and **Crunch** mode in one tap from the home header (or from More). Open mode is for "what's the one next thing"; crunch mode surfaces the queue of tasks needing attention.
+
+### Background Enrichment
+After you capture a task (and on app open), Homunculus quietly sends raw captures to Claude and writes back a structured understanding: a plain-English **summary** (shown on the task), fog level, type, and — only where you left them blank — size, an inferred deadline, and a next action. It can also propose **suggested steps**, which appear on the task detail for you to add or dismiss with one tap (never created silently). These richer summaries are what the prioritization call then reasons over. Runs only when an API key is configured; otherwise tasks stay as-is.
 
 ### Setup Flow
 Walk through working style preferences (active hours, session length, engagement style, mode rhythm, notification tone) and define your life domains with descriptions and weights.
@@ -96,8 +116,8 @@ Every action (capture, complete, edit, snooze, skip, cancel) is logged with time
 
 Roughly in order of priority:
 
-- **AI prioritization** — "What should I focus on next?" Single recommendation in open mode, attention queue in crunch mode
-- **Background enrichment** — Claude summarizes raw captures, detects fog, suggests subtasks (runs idle, via Batch API)
+- ~~**AI prioritization** — "What should I focus on next?" Single recommendation in open mode, attention queue in crunch mode~~ ✅ Done
+- ~~**Background enrichment** — Claude summarizes raw captures, detects fog, suggests subtasks~~ ✅ Done (currently a single batched Messages-API call triggered on capture / app open; moving to the async Batch API for ~50% cost savings is a future optimization)
 - **Clarifying question queue** — AI-generated questions surfaced at app open, max 2 per session
 - **Native intelligence layer** — daily pattern detection (active hours, momentum, avoidance signals), notification engine, all on-device with zero API cost
 - **Advisor sessions** — multi-turn conversation to break down foggy tasks
@@ -109,24 +129,38 @@ Roughly in order of priority:
 ```
 src/
 ├── app/                    # Next.js app router pages
-│   ├── layout.tsx          # Root layout with fonts
-│   ├── page.tsx            # Home (overview)
+│   ├── layout.tsx          # Root layout: fonts, PWA meta, viewport, SW registration
+│   ├── page.tsx            # Home (Counsel + overview + mode toggle)
 │   ├── setup/page.tsx      # Onboarding
+│   ├── reviews/page.tsx    # Reviews (weekly review / advisor — coming soon)
+│   ├── more/page.tsx       # Settings, profile, data reset
+│   ├── api/
+│   │   ├── _anthropic.ts   # Shared server-side Claude helper (key stays off-device)
+│   │   ├── prioritise/     # "What should I focus on next?" call
+│   │   └── enrich/         # Background enrichment of raw captures
 │   └── tasks/
 │       ├── page.tsx        # Task list
 │       └── [id]/page.tsx   # Task detail
 ├── components/
 │   ├── capture/            # Capture overlay
-│   ├── layout/             # NavBar, CaptureButton
+│   ├── home/               # Counsel card, ModeToggle
+│   ├── layout/             # NavBar, CaptureButton, ServiceWorker, ComingSoon
 │   ├── setup/              # Setup flow steps
 │   └── tasks/              # TaskList, TaskDetail
 └── lib/
-    ├── actions.ts          # All task/profile CRUD + event logging
+    ├── actions.ts          # All task/profile CRUD + event logging + setMode
+    ├── ai.ts               # Prioritization: context assembly, cache, fallback
+    ├── enrich.ts           # Background enrichment trigger + write-back
     ├── db.ts               # Dexie (IndexedDB) schema
     ├── importance.ts       # Native importance calculation
     └── types.ts            # TypeScript types and enums
+
+public/                     # PWA manifest, generated icons, service worker
+wrangler.jsonc              # Cloudflare Worker config
+open-next.config.ts         # OpenNext adapter config
+scripts/generate-icons.mjs  # Regenerates app icons (no image-lib dependency)
 ```
 
 ## Data Storage
 
-All data is stored in IndexedDB via Dexie — nothing leaves your browser. To inspect or reset: DevTools > Application > IndexedDB > `homunculus`. Clearing it resets the app to the setup flow.
+All data is stored in IndexedDB via Dexie and never persisted on a server. The one time data leaves the device is when you tap for Counsel: the relevant active tasks (title, importance, deadline, domain) are sent to Claude for that single request and not stored. To inspect or reset locally: DevTools > Application > IndexedDB > `homunculus` (or use *More → Reset app*). Clearing it resets the app to the setup flow.

@@ -81,6 +81,8 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
 
     enrichment_status: 'raw',
     enrichment_summary: null,
+    enriched_at: null,
+    suggested_subtasks: [],
 
     fog_level: 'clear',
     next_action: null,
@@ -177,6 +179,19 @@ export async function addSubtask(parentId: string, title: string): Promise<Task>
   return subtask;
 }
 
+export async function acceptSuggestedSubtask(parentId: string, label: string): Promise<void> {
+  const parent = await db.tasks.get(parentId);
+  if (!parent) return;
+  await addSubtask(parentId, label);
+  await db.tasks.update(parentId, {
+    suggested_subtasks: (parent.suggested_subtasks ?? []).filter((s) => s !== label),
+  });
+}
+
+export async function dismissSuggestedSubtasks(parentId: string): Promise<void> {
+  await db.tasks.update(parentId, { suggested_subtasks: [] });
+}
+
 export async function deleteSubtask(parentId: string, subtaskId: string): Promise<void> {
   const parent = await db.tasks.get(parentId);
   if (parent) {
@@ -261,6 +276,14 @@ export async function updateProfile(updates: Partial<UserProfile>): Promise<void
   if (profile) {
     await db.userProfile.update(profile.id, updates);
   }
+}
+
+export async function setMode(mode: OperatingMode): Promise<void> {
+  const profile = await getProfile();
+  if (!profile || profile.operating_mode === mode) return;
+  const from_mode = profile.operating_mode;
+  await db.userProfile.update(profile.id, { operating_mode: mode });
+  await logEvent('mode_changed', { from_mode, to_mode: mode });
 }
 
 export async function hasProfile(): Promise<boolean> {

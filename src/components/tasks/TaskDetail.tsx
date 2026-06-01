@@ -13,6 +13,8 @@ import {
   reactivateTask,
   addSubtask,
   deleteSubtask,
+  acceptSuggestedSubtask,
+  dismissSuggestedSubtasks,
   logEvent,
 } from '@/lib/actions';
 import type {
@@ -165,6 +167,14 @@ export default function TaskDetail({ taskId }: Props) {
         >
           {task.title}
         </h1>
+      )}
+
+      {/* Enrichment summary — Homunculus's understanding of the task */}
+      {task.enrichment_summary && (
+        <div className={styles.enrichmentSummary}>
+          <span className={styles.enrichmentLabel}>As Homunculus understands it</span>
+          <p className={styles.enrichmentText}>{task.enrichment_summary}</p>
+        </div>
       )}
 
       {/* Domain — editable */}
@@ -338,6 +348,34 @@ export default function TaskDetail({ taskId }: Props) {
       </div>
 
       <div className={styles.divider} />
+
+      {/* Suggested steps from enrichment — await user confirmation */}
+      {!isTerminal && task.suggested_subtasks && task.suggested_subtasks.length > 0 && (
+        <div className={styles.detailSection}>
+          <div className={styles.suggestedHeader}>
+            <span className={styles.detailLabel}>Suggested steps</span>
+            <button
+              className={styles.suggestedDismiss}
+              onClick={() => dismissSuggestedSubtasks(taskId)}
+            >
+              Dismiss all
+            </button>
+          </div>
+          <div className={styles.suggestedList}>
+            {task.suggested_subtasks.map((label, i) => (
+              <div key={`${label}-${i}`} className={styles.suggestedItem}>
+                <span className={styles.suggestedLabel}>{label}</span>
+                <button
+                  className={styles.suggestedAdd}
+                  onClick={() => acceptSuggestedSubtask(taskId, label)}
+                >
+                  + Add
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Subtasks */}
       <div className={styles.detailSection}>

@@ -70,6 +70,8 @@ export interface Task {
   // Enrichment
   enrichment_status: EnrichmentStatus;
   enrichment_summary: string | null;
+  enriched_at: string | null;
+  suggested_subtasks: string[]; // AI-suggested steps awaiting user confirmation
 
   // Intelligence
   fog_level: FogLevel;
@@ -150,6 +152,7 @@ export type InteractionEventType =
   | 'notification_ignored'
   | 'question_answered'
   | 'question_dismissed'
+  | 'prioritisation_call'
   | 'advisor_session_started'
   | 'advisor_session_ended'
   | 'weekly_review_completed'

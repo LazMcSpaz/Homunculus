@@ -1,0 +1,22 @@
+{
+  "name": "Homunculus",
+  "short_name": "Homunculus",
+  "description": "A personal achievement engine that surfaces the right action at the right moment.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5EDD8",
+  "theme_color": "#8B2A2A",
+  "categories": ["productivity"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

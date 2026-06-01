@@ -3,7 +3,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  min-height: 60px;
   background: var(--parchment-deep);
   border-top: 1px solid var(--parchment-shadow);
   display: flex;
@@ -11,6 +11,7 @@
   justify-content: space-around;
   z-index: var(--z-nav);
   padding: 0 var(--space-md);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .navItem {

@@ -1,0 +1,85 @@
+.container {
+  padding: var(--space-lg);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.title {
+  font-family: var(--font-cormorant), serif;
+  font-size: var(--font-display);
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+}
+
+.tagline {
+  font-family: var(--font-fell), serif;
+  font-size: var(--font-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--parchment-ink-faint);
+  margin-bottom: var(--space-xl);
+}
+
+.card {
+  padding: var(--space-lg);
+  background: var(--surface-card);
+  border: 1px solid var(--parchment-shadow);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
+.cardTitle {
+  font-family: var(--font-cormorant), serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: var(--space-xs);
+}
+
+.cardBody {
+  font-family: var(--font-crimson), serif;
+  font-size: 15px;
+  color: var(--parchment-ink-mid);
+  line-height: 1.5;
+}
+
+.soon {
+  display: inline-block;
+  margin-top: var(--space-sm);
+  font-family: var(--font-fell), serif;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.action {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-md);
+  background: var(--surface-card);
+  border: 1px solid var(--parchment-shadow);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+  font-family: var(--font-crimson), serif;
+  font-size: 15px;
+  color: var(--parchment-ink);
+  transition: border-color var(--transition-fast);
+}
+
+.action:hover {
+  border-color: var(--gold);
+}
+
+.actionDanger {
+  color: var(--accent);
+}
+
+.actionHint {
+  display: block;
+  font-family: var(--font-crimson), serif;
+  font-size: 13px;
+  color: var(--parchment-ink-faint);
+  margin-top: 2px;
+}

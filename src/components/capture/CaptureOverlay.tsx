@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { createTask } from '@/lib/actions';
+import { enrichPendingTasks } from '@/lib/enrich';
 import type { TaskSize, Domain } from '@/lib/types';
 import styles from './Capture.module.css';
 
@@ -37,6 +38,9 @@ export default function CaptureOverlay({ onClose }: Props) {
       text: task.title + (domain ? ` \u00b7 ${domain.name}` : ''),
       color: domain?.color_tag ?? 'var(--gold)',
     });
+
+    // Enrich the new capture in the background (no-op without an API key).
+    enrichPendingTasks();
 
     setTimeout(() => {
       onClose();

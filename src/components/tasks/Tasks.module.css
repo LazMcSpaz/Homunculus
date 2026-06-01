@@ -719,3 +719,90 @@
   );
   margin: var(--space-md) 0;
 }
+
+/* ── Enrichment summary ── */
+.enrichmentSummary {
+  margin: var(--space-md) 0 var(--space-lg);
+  padding: var(--space-md);
+  background: var(--gold-faint);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+}
+
+.enrichmentLabel {
+  display: block;
+  font-family: var(--font-fell), serif;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: var(--space-xs);
+}
+
+.enrichmentText {
+  font-family: var(--font-crimson), serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--parchment-ink-mid);
+  font-style: italic;
+}
+
+/* ── Suggested steps ── */
+.suggestedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.suggestedDismiss {
+  font-family: var(--font-fell), serif;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment-ink-faint);
+}
+
+.suggestedDismiss:hover {
+  color: var(--accent);
+}
+
+.suggestedList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.suggestedItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--surface-card-alt);
+  border: 1px dashed var(--parchment-shadow);
+  border-radius: var(--radius-sm);
+}
+
+.suggestedLabel {
+  flex: 1;
+  font-family: var(--font-crimson), serif;
+  font-size: 15px;
+  color: var(--parchment-ink);
+}
+
+.suggestedAdd {
+  font-family: var(--font-fell), serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.suggestedAdd:hover {
+  background: var(--accent);
+  color: #f5edd8;
+}
