@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { hasProfile, recalculateAllImportance, logEvent } from '@/lib/actions';
+import { enrichPendingTasks } from '@/lib/enrich';
 import NavBar from '@/components/layout/NavBar';
 import CaptureButton from '@/components/layout/CaptureButton';
 import CaptureOverlay from '@/components/capture/CaptureOverlay';
@@ -36,6 +37,8 @@ export default function Home() {
       } else {
         recalculateAllImportance();
         logEvent('app_opened', {}, 'system');
+        // Enrich any raw captures in the background (no-op without an API key).
+        enrichPendingTasks();
         setLoading(false);
       }
     });

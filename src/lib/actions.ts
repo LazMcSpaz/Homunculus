@@ -81,6 +81,8 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
 
     enrichment_status: 'raw',
     enrichment_summary: null,
+    enriched_at: null,
+    suggested_subtasks: [],
 
     fog_level: 'clear',
     next_action: null,
@@ -175,6 +177,19 @@ export async function addSubtask(parentId: string, title: string): Promise<Task>
   });
 
   return subtask;
+}
+
+export async function acceptSuggestedSubtask(parentId: string, label: string): Promise<void> {
+  const parent = await db.tasks.get(parentId);
+  if (!parent) return;
+  await addSubtask(parentId, label);
+  await db.tasks.update(parentId, {
+    suggested_subtasks: (parent.suggested_subtasks ?? []).filter((s) => s !== label),
+  });
+}
+
+export async function dismissSuggestedSubtasks(parentId: string): Promise<void> {
+  await db.tasks.update(parentId, { suggested_subtasks: [] });
 }
 
 export async function deleteSubtask(parentId: string, subtaskId: string): Promise<void> {

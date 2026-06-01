@@ -15,7 +15,7 @@ Medieval-classical aesthetic: warm parchment tones, wax-seal red accents, gold h
 - **Next.js 15** — React framework with app router
 - **React 18** + **TypeScript**
 - **Dexie** (IndexedDB) — all data lives on-device; nothing is stored on a server
-- **Claude Haiku 4.5** — powers the "what should I focus on next?" prioritization call via a server-side proxy (the API key never reaches the browser). Falls back to native ranking when unavailable. Enrichment, advisor sessions, and weekly review are planned.
+- **Claude Haiku 4.5** — powers prioritization ("what should I focus on next?") and background enrichment of raw captures, via server-side proxies (the API key never reaches the browser). Falls back to native behavior when unavailable. Advisor sessions and weekly review are planned.
 - **PWA** — installable to your home screen, runs full-screen, works offline (the app shell is cached; your data is already local)
 - **Cloudflare Workers** — deployed via the [OpenNext](https://opennext.js.org/cloudflare) adapter
 
@@ -73,6 +73,9 @@ The home screen shows your active task count, a per-domain overview, and the **C
 ### Operating Mode
 Toggle between **Open** and **Crunch** mode in one tap from the home header (or from More). Open mode is for "what's the one next thing"; crunch mode surfaces the queue of tasks needing attention.
 
+### Background Enrichment
+After you capture a task (and on app open), Homunculus quietly sends raw captures to Claude and writes back a structured understanding: a plain-English **summary** (shown on the task), fog level, type, and — only where you left them blank — size, an inferred deadline, and a next action. It can also propose **suggested steps**, which appear on the task detail for you to add or dismiss with one tap (never created silently). These richer summaries are what the prioritization call then reasons over. Runs only when an API key is configured; otherwise tasks stay as-is.
+
 ### Setup Flow
 Walk through working style preferences (active hours, session length, engagement style, mode rhythm, notification tone) and define your life domains with descriptions and weights.
 
@@ -114,7 +117,7 @@ Every action (capture, complete, edit, snooze, skip, cancel) is logged with time
 Roughly in order of priority:
 
 - ~~**AI prioritization** — "What should I focus on next?" Single recommendation in open mode, attention queue in crunch mode~~ ✅ Done
-- **Background enrichment** — Claude summarizes raw captures, detects fog, suggests subtasks (runs idle, via Batch API). Once built, prioritization will use these richer summaries instead of raw task titles.
+- ~~**Background enrichment** — Claude summarizes raw captures, detects fog, suggests subtasks~~ ✅ Done (currently a single batched Messages-API call triggered on capture / app open; moving to the async Batch API for ~50% cost savings is a future optimization)
 - **Clarifying question queue** — AI-generated questions surfaced at app open, max 2 per session
 - **Native intelligence layer** — daily pattern detection (active hours, momentum, avoidance signals), notification engine, all on-device with zero API cost
 - **Advisor sessions** — multi-turn conversation to break down foggy tasks
@@ -131,7 +134,10 @@ src/
 │   ├── setup/page.tsx      # Onboarding
 │   ├── reviews/page.tsx    # Reviews (weekly review / advisor — coming soon)
 │   ├── more/page.tsx       # Settings, profile, data reset
-│   ├── api/prioritise/     # Server-side Claude proxy (key stays off-device)
+│   ├── api/
+│   │   ├── _anthropic.ts   # Shared server-side Claude helper (key stays off-device)
+│   │   ├── prioritise/     # "What should I focus on next?" call
+│   │   └── enrich/         # Background enrichment of raw captures
 │   └── tasks/
 │       ├── page.tsx        # Task list
 │       └── [id]/page.tsx   # Task detail
@@ -144,6 +150,7 @@ src/
 └── lib/
     ├── actions.ts          # All task/profile CRUD + event logging + setMode
     ├── ai.ts               # Prioritization: context assembly, cache, fallback
+    ├── enrich.ts           # Background enrichment trigger + write-back
     ├── db.ts               # Dexie (IndexedDB) schema
     ├── importance.ts       # Native importance calculation
     └── types.ts            # TypeScript types and enums

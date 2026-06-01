@@ -1,22 +1,7 @@
 import { NextResponse } from 'next/server';
+import { getApiKey, callAnthropic, extractJson } from '../_anthropic';
 
 export const dynamic = 'force-dynamic';
-
-// Claude Haiku 4.5 — fast, cheap structured output. Per the AI Layer design doc.
-const MODEL = 'claude-haiku-4-5-20251001';
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-
-/** Resolve the API key from the Cloudflare Worker env, falling back to process.env (local dev). */
-async function getApiKey(): Promise<string | undefined> {
-  try {
-    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
-    const { env } = getCloudflareContext();
-    if (env?.ANTHROPIC_API_KEY) return env.ANTHROPIC_API_KEY;
-  } catch {
-    // Not running on the Cloudflare runtime (e.g. plain `next dev`).
-  }
-  return process.env.ANTHROPIC_API_KEY;
-}
 
 interface TaskCtx {
   id: string;
@@ -103,16 +88,6 @@ function buildUserContent(p: PrioritisePayload): string {
     .join('\n');
 }
 
-function extractJson(text: string): unknown {
-  // Prefer a fenced or bare JSON object; fall back to the first balanced {...}.
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fence ? fence[1] : text;
-  const start = candidate.indexOf('{');
-  const end = candidate.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error('No JSON object in model response');
-  return JSON.parse(candidate.slice(start, end + 1));
-}
-
 export async function POST(request: Request) {
   const apiKey = await getApiKey();
   if (!apiKey) {
@@ -135,38 +110,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    const res = await fetch(ANTHROPIC_URL, {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1024,
-        // Cache the standing persona/instructions — static across every call.
-        system: [{ type: 'text', text: PERSONA, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: buildUserContent(payload) }],
-      }),
+    // Cache the standing persona/instructions — static across every call.
+    const result = await callAnthropic(apiKey, {
+      system: [{ type: 'text', text: PERSONA, cache_control: { type: 'ephemeral' } }],
+      userContent: buildUserContent(payload),
+      maxTokens: 1024,
     });
 
-    if (!res.ok) {
-      const detail = await res.text();
+    if (!result.ok) {
       return NextResponse.json(
-        { error: 'Upstream AI error', status: res.status, detail: detail.slice(0, 500) },
+        { error: 'Upstream AI error', status: result.status, detail: result.text },
         { status: 502 },
       );
     }
 
-    const data = (await res.json()) as { content?: { type: string; text?: string }[] };
-    const text = (data.content ?? [])
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text ?? '')
-      .join('');
-
-    const parsed = extractJson(text);
-    return NextResponse.json(parsed);
+    return NextResponse.json(extractJson(result.text));
   } catch (err) {
     return NextResponse.json(
       { error: 'Failed to get recommendation', detail: String(err) },
