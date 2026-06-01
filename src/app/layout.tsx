@@ -1,9 +1,36 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import ServiceWorker from "@/components/layout/ServiceWorker";
 
 export const metadata: Metadata = {
   title: "Homunculus",
-  description: "A personal AI achievement engine",
+  description: "A personal achievement engine that surfaces the right action at the right moment.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Homunculus",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Homunculus",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F5EDD8" },
+    { media: "(prefers-color-scheme: dark)", color: "#1A1209" },
+  ],
 };
 
 export default function RootLayout({
@@ -21,6 +48,7 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        <ServiceWorker />
       </body>
     </html>
   );
