@@ -241,6 +241,130 @@
   padding: var(--space-sm) 0;
 }
 
+/* ── Clarifying question prompt ── */
+.questionCard {
+  padding: var(--space-lg);
+  background: var(--surface-card);
+  border: 1px solid var(--parchment-shadow);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+}
+
+.questionText {
+  font-family: var(--font-cormorant), serif;
+  font-size: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--parchment-ink);
+  margin-bottom: var(--space-xs);
+}
+
+.questionRef {
+  font-family: var(--font-crimson), serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--parchment-ink-faint);
+  margin-bottom: var(--space-md);
+}
+
+.questionInput {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface-card-alt);
+  border: 1px solid var(--parchment-shadow);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  margin-bottom: var(--space-sm);
+}
+
+.questionActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.questionSkip {
+  font-family: var(--font-fell), serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment-ink-faint);
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.questionSubmit {
+  margin-left: auto;
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--accent);
+  color: #f5edd8;
+  border-radius: var(--radius-md);
+  font-family: var(--font-cormorant), serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.questionSubmit:disabled {
+  opacity: 0.5;
+}
+
+/* ── Mode transition brief overlay ── */
+.briefBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--surface-overlay);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--space-md);
+  padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom));
+}
+
+.briefCard {
+  width: 100%;
+  max-width: 560px;
+  max-height: 85dvh;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  background: var(--parchment-base);
+  border: 1px solid var(--parchment-shadow);
+  border-top: 3px solid var(--gold);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
+  animation: homunculus-rise var(--transition-normal) ease both;
+}
+
+.briefPara {
+  font-family: var(--font-crimson), serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--parchment-ink-mid);
+  margin-bottom: var(--space-sm);
+}
+
+.briefPriority {
+  display: block;
+  margin: var(--space-md) 0 var(--space-sm);
+  font-family: var(--font-cormorant), serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.briefDismiss {
+  width: 100%;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--accent);
+  color: #f5edd8;
+  border-radius: var(--radius-md);
+  font-family: var(--font-cormorant), serif;
+  font-size: 17px;
+  font-weight: 600;
+}
+
 /* ── Domain overview ── */
 .sectionLabel {
   font-family: var(--font-fell), serif;

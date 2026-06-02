@@ -7,11 +7,14 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { hasProfile, recalculateAllImportance, logEvent } from '@/lib/actions';
 import { enrichPendingTasks } from '@/lib/enrich';
+import { runDailyPatternDetection } from '@/lib/intelligence';
+import { syncSchedule } from '@/lib/notifications';
 import NavBar from '@/components/layout/NavBar';
 import CaptureButton from '@/components/layout/CaptureButton';
 import CaptureOverlay from '@/components/capture/CaptureOverlay';
 import Counsel from '@/components/home/Counsel';
 import ModeToggle from '@/components/home/ModeToggle';
+import QuestionPrompt from '@/components/home/QuestionPrompt';
 import styles from '@/components/home/Home.module.css';
 
 function Divider() {
@@ -39,6 +42,10 @@ export default function Home() {
         logEvent('app_opened', {}, 'system');
         // Enrich any raw captures in the background (no-op without an API key).
         enrichPendingTasks();
+        // Refresh on-device behavioural patterns (self-guarded to once/day).
+        runDailyPatternDetection();
+        // Keep push reminders in sync with current deadlines (no-op if disabled).
+        syncSchedule();
         setLoading(false);
       }
     });
@@ -67,6 +74,7 @@ export default function Home() {
   const mode = profile.operating_mode;
   const domains = profile.domains ?? [];
   const activeTotal = (tasks ?? []).filter((t) => !t.parent_task_id).length;
+  const streak = profile.momentum?.streak ?? 0;
 
   return (
     <>
@@ -76,10 +84,13 @@ export default function Home() {
             <h1 className={styles.title}>Homunculus</h1>
             <p className={styles.subtitle}>
               {activeTotal === 0 ? 'At rest' : `${activeTotal} active`} &middot; {mode} mode
+              {streak >= 2 && ` · ${streak}-day streak`}
             </p>
           </div>
           <ModeToggle mode={mode} />
         </div>
+
+        <QuestionPrompt />
 
         <Counsel mode={mode} />
 

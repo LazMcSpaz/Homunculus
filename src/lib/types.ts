@@ -29,6 +29,7 @@ export interface ClarificationEntry {
   answer: string | null;
   asked_at: string; // ISO timestamp
   answered_at: string | null;
+  dismissed_at?: string | null; // set when the user dismisses without answering
 }
 
 export interface Task {

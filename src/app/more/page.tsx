@@ -9,6 +9,7 @@ import NavBar from '@/components/layout/NavBar';
 import CaptureButton from '@/components/layout/CaptureButton';
 import CaptureOverlay from '@/components/capture/CaptureOverlay';
 import ModeToggle from '@/components/home/ModeToggle';
+import NotificationsSettings from '@/components/settings/NotificationsSettings';
 import styles from '@/components/layout/ComingSoon.module.css';
 
 export default function MorePage() {
@@ -56,13 +57,14 @@ export default function MorePage() {
           </p>
         </div>
 
+        <NotificationsSettings />
+
         <div className={styles.card}>
-          <p className={styles.cardTitle}>Notifications</p>
+          <p className={styles.cardTitle}>Notification tone</p>
           <p className={styles.cardBody}>
-            Tone: {profile.notification_calibration.notification_tone.replace(/_/g, ' ')}.
-            Push notifications are coming soon.
+            Currently {profile.notification_calibration.notification_tone.replace(/_/g, ' ')}.
+            This shapes how directly Homunculus speaks.
           </p>
-          <span className={styles.soon}>Coming soon</span>
         </div>
 
         <div className={styles.card}>
