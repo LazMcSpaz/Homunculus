@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { hasProfile, recalculateAllImportance, logEvent } from '@/lib/actions';
 import { enrichPendingTasks } from '@/lib/enrich';
 import { runDailyPatternDetection } from '@/lib/intelligence';
+import { syncSchedule } from '@/lib/notifications';
 import NavBar from '@/components/layout/NavBar';
 import CaptureButton from '@/components/layout/CaptureButton';
 import CaptureOverlay from '@/components/capture/CaptureOverlay';
@@ -43,6 +44,8 @@ export default function Home() {
         enrichPendingTasks();
         // Refresh on-device behavioural patterns (self-guarded to once/day).
         runDailyPatternDetection();
+        // Keep push reminders in sync with current deadlines (no-op if disabled).
+        syncSchedule();
         setLoading(false);
       }
     });

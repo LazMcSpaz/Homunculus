@@ -27,6 +27,25 @@ Set it either in the dashboard or via the CLI:
 
 Without it, the app still works — AI calls fall back to native behavior.
 
+### 1b. Set the Web Push key (for notifications)
+
+Push notifications (deadline reminders, weekly-review nudge) need a VAPID key
+pair. The **public** key is already committed in `src/lib/push-config.ts`; the
+**private** key must be a runtime Worker secret. Set it as a JSON string:
+
+```bash
+npx wrangler secret put VAPID_PRIVATE_KEY
+# paste the private JWK, e.g. {"alg":"ES256","kty":"EC",...}
+# optional:
+npx wrangler secret put VAPID_SUBJECT   # e.g. mailto:you@example.com
+```
+
+To rotate keys, run `npx @pushforge/builder vapid`, put the new public key in
+`src/lib/push-config.ts`, and set the new private JWK as the secret. The push
+subscriptions live in the `PUSH_KV` namespace (already configured in
+`wrangler.jsonc`), and a Cron Trigger (every 5 min) flushes due reminders — both
+are picked up automatically on deploy.
+
 ### 2. Connect the repo to Workers Builds
 
 In the [Cloudflare dashboard](https://dash.cloudflare.com):

@@ -1,7 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "homunculus",
-  "main": ".open-next/worker.js",
+  // Custom entry: re-exports the OpenNext fetch handler and adds a scheduled()
+  // handler for push reminders. See worker.ts.
+  "main": "worker.ts",
   "compatibility_date": "2025-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
@@ -9,9 +11,18 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "kv_namespaces": [
+    { "binding": "PUSH_KV", "id": "7f8a6957496b49f7bac53eb19f195f1e" }
+  ],
+  "triggers": {
+    // Every 5 minutes: flush due push reminders.
+    "crons": ["*/5 * * * *"]
+  },
   "observability": {
     "enabled": true
   }
   // Secrets (set with `npx wrangler secret put <NAME>` or in the dashboard):
-  //   ANTHROPIC_API_KEY — required for the AI prioritisation call.
+  //   ANTHROPIC_API_KEY  — required for the AI calls.
+  //   VAPID_PRIVATE_KEY  — JWK (JSON string) for Web Push signing.
+  //   VAPID_SUBJECT      — mailto: contact for Web Push (optional; has a default).
 }

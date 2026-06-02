@@ -5,6 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { createTask } from '@/lib/actions';
 import { enrichPendingTasks } from '@/lib/enrich';
+import { syncSchedule } from '@/lib/notifications';
 import type { TaskSize, Domain } from '@/lib/types';
 import styles from './Capture.module.css';
 
@@ -41,6 +42,8 @@ export default function CaptureOverlay({ onClose }: Props) {
 
     // Enrich the new capture in the background (no-op without an API key).
     enrichPendingTasks();
+    // Refresh push reminders if a deadline was set (no-op if disabled).
+    if (deadline) syncSchedule();
 
     setTimeout(() => {
       onClose();
