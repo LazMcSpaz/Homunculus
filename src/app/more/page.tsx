@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { invalidatePrioritisationCache } from '@/lib/ai';
+import { updateProfile } from '@/lib/actions';
 import NavBar from '@/components/layout/NavBar';
 import CaptureButton from '@/components/layout/CaptureButton';
 import CaptureOverlay from '@/components/capture/CaptureOverlay';
@@ -23,6 +24,21 @@ export default function MorePage() {
     invalidatePrioritisationCache();
     await db.delete();
     window.location.href = '/';
+  }
+
+  async function setDomainWeight(id: string, weight: number) {
+    if (!profile) return;
+    const domains = profile.domains.map((d) => (d.id === id ? { ...d, weight } : d));
+    await updateProfile({ domains });
+    invalidatePrioritisationCache();
+  }
+
+  async function setTone(tone: 'send_them' | 'be_selective' | 'minimal') {
+    if (!profile) return;
+    await updateProfile({
+      notification_calibration: { ...profile.notification_calibration, notification_tone: tone },
+    });
+    invalidatePrioritisationCache();
   }
 
   if (!profile) {
@@ -50,21 +66,57 @@ export default function MorePage() {
 
         <div className={styles.card}>
           <p className={styles.cardTitle}>Domains</p>
-          <p className={styles.cardBody}>
-            {profile.domains.length > 0
-              ? profile.domains.map((d) => `${d.name} (${d.weight})`).join(' · ')
-              : 'No domains defined.'}
+          <p className={styles.cardBody} style={{ marginBottom: 'var(--space-sm)' }}>
+            How much each life area weighs on what Homunculus surfaces (1–5).
           </p>
+          {profile.domains.length > 0 ? (
+            profile.domains.map((d) => (
+              <div key={d.id} className={styles.weightRow}>
+                <span className={styles.weightDot} style={{ backgroundColor: d.color_tag }} />
+                <span className={styles.weightName}>{d.name}</span>
+                <span className={styles.weightChips}>
+                  {[1, 2, 3, 4, 5].map((w) => (
+                    <button
+                      key={w}
+                      className={`${styles.weightChip} ${d.weight === w ? styles.weightChipActive : ''}`}
+                      onClick={() => setDomainWeight(d.id, w)}
+                      aria-label={`${d.name} weight ${w}`}
+                    >
+                      {w}
+                    </button>
+                  ))}
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className={styles.cardBody}>No domains defined.</p>
+          )}
         </div>
 
         <NotificationsSettings />
 
         <div className={styles.card}>
-          <p className={styles.cardTitle}>Notification tone</p>
-          <p className={styles.cardBody}>
-            Currently {profile.notification_calibration.notification_tone.replace(/_/g, ' ')}.
-            This shapes how directly Homunculus speaks.
+          <p className={styles.cardTitle}>Counsel tone</p>
+          <p className={styles.cardBody} style={{ marginBottom: 'var(--space-sm)' }}>
+            How directly Homunculus speaks to you.
           </p>
+          <div className={styles.toneChips}>
+            {([
+              ['send_them', 'Forthright'],
+              ['be_selective', 'Balanced'],
+              ['minimal', 'Restrained'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                className={`${styles.toneChip} ${
+                  profile.notification_calibration.notification_tone === value ? styles.toneChipActive : ''
+                }`}
+                onClick={() => setTone(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className={styles.card}>

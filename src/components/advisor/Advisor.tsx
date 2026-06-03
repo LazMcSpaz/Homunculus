@@ -29,6 +29,7 @@ export default function Advisor({ taskId }: { taskId: string }) {
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const [error, setError] = useState(false);
+  const [notConfigured, setNotConfigured] = useState(false);
   const [resolved, setResolved] = useState(false);
   const startedRef = useRef(false);
   const threadRef = useRef<HTMLDivElement>(null);
@@ -54,6 +55,7 @@ export default function Advisor({ taskId }: { taskId: string }) {
       if (!task) return;
       setThinking(true);
       setError(false);
+      setNotConfigured(false);
 
       const domainName = profile?.domains.find((d) => d.id === task.domain_id)?.name ?? null;
       const payload = {
@@ -86,7 +88,8 @@ export default function Advisor({ taskId }: { taskId: string }) {
         });
         clearTimeout(timer);
         if (!res.ok) {
-          setError(true);
+          if (res.status === 503) setNotConfigured(true);
+          else setError(true);
           return;
         }
         const data = (await res.json()) as AdvisorResponse;
@@ -172,6 +175,13 @@ export default function Advisor({ taskId }: { taskId: string }) {
             Taking longer than expected.
             <br />
             <button className={styles.retryBtn} onClick={handleRetry}>Tap to retry</button>
+          </div>
+        )}
+
+        {notConfigured && (
+          <div className={styles.errorBubble}>
+            The advisor needs the Claude API key set on the server before it can think
+            this through. Once that&rsquo;s in place, come back and I&rsquo;ll help.
           </div>
         )}
 

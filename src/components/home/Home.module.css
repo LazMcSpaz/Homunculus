@@ -1,5 +1,6 @@
 .container {
   padding: var(--space-lg);
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
   max-width: 600px;
   margin: 0 auto;
 }
@@ -313,20 +314,23 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-overlay);
-  background: var(--surface-overlay);
+  background: rgba(20, 14, 6, 0.55);
   backdrop-filter: blur(2px);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   padding: var(--space-md);
+  padding-top: calc(var(--space-md) + env(safe-area-inset-top));
   padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom));
+  overflow-y: auto;
 }
 
 .briefCard {
   width: 100%;
   max-width: 560px;
-  max-height: 85dvh;
+  max-height: 88dvh;
   overflow-y: auto;
+  margin: auto;
   padding: var(--space-lg);
   background: var(--parchment-base);
   border: 1px solid var(--parchment-shadow);
