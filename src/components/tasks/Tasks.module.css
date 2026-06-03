@@ -1,5 +1,6 @@
 .container {
   padding: var(--space-lg);
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
   max-width: 600px;
   margin: 0 auto;
 }

@@ -1,7 +1,74 @@
 .container {
   padding: var(--space-lg);
+  /* Clear the fixed bottom nav + capture button (and the home-indicator). */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
   max-width: 600px;
   margin: 0 auto;
+}
+
+/* ── Domain weight editor ── */
+.weightRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+}
+
+.weightDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.weightName {
+  flex: 1;
+  font-family: var(--font-crimson), serif;
+  font-size: 15px;
+  color: var(--parchment-ink);
+}
+
+.weightChips {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.weightChip {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--parchment-shadow);
+  color: var(--parchment-ink-faint);
+  font-family: var(--font-fell), serif;
+  font-size: 13px;
+}
+
+.weightChipActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #f5edd8;
+}
+
+/* ── Tone selector ── */
+.toneChips {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.toneChip {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--parchment-shadow);
+  color: var(--parchment-ink-mid);
+  font-family: var(--font-crimson), serif;
+  font-size: 14px;
+}
+
+.toneChipActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #f5edd8;
 }
 
 .title {
