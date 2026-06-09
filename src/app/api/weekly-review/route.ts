@@ -138,7 +138,8 @@ export async function POST(request: Request) {
         { type: 'text', text: buildContext(payload) },
       ],
       messages,
-      maxTokens: 900,
+      // Headroom for turns that return task_updates / profile_updates alongside prose.
+      maxTokens: 1536,
     });
 
     if (!result.ok) {
