@@ -29,6 +29,8 @@ export interface AnthropicCallResult {
   status: number;
   /** Concatenated text content when ok; error detail otherwise. */
   text: string;
+  /** True when the model hit max_tokens (output likely truncated). */
+  truncated?: boolean;
 }
 
 interface Message {
@@ -67,12 +69,16 @@ export async function callAnthropic(
     return { ok: false, status: res.status, text: (await res.text()).slice(0, 500) };
   }
 
-  const data = (await res.json()) as { content?: { type: string; text?: string }[] };
+  const data = (await res.json()) as {
+    content?: { type: string; text?: string }[];
+    stop_reason?: string;
+  };
   const text = (data.content ?? [])
     .filter((b) => b.type === 'text')
     .map((b) => b.text ?? '')
     .join('');
-  return { ok: true, status: 200, text };
+  // stop_reason === 'max_tokens' means the JSON was likely truncated.
+  return { ok: true, status: 200, text, truncated: data.stop_reason === 'max_tokens' };
 }
 
 /** Extract a JSON value from a model response that may be fenced or prose-wrapped. */

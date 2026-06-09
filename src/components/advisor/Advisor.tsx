@@ -96,11 +96,17 @@ export default function Advisor({ taskId }: { taskId: string }) {
           if (!res.ok) return 'retry'; // 429 / 5xx / parse failure upstream
           const data = (await res.json()) as AdvisorResponse;
           setMessages((prev) => [...prev, { role: 'assistant', content: data.response_text }]);
-          await applyAdvisorOutcome(taskId, {
-            next_action: data.next_action,
-            suggested_subtasks: data.suggested_subtasks,
-            new_questions: data.new_questions,
-          });
+          // Write-back is best-effort: never let it throw (would trigger a retry
+          // and duplicate the message we just appended).
+          try {
+            await applyAdvisorOutcome(taskId, {
+              next_action: data.next_action,
+              suggested_subtasks: data.suggested_subtasks,
+              new_questions: data.new_questions,
+            });
+          } catch {
+            /* keep the conversation going even if the task update fails */
+          }
           if (data.session_state === 'resolved') setResolved(true);
           return 'ok';
         } catch {

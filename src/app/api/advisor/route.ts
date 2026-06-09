@@ -97,7 +97,9 @@ export async function POST(request: Request) {
         { type: 'text', text: buildTaskContext(payload) },
       ],
       messages,
-      maxTokens: 768,
+      // Headroom so a resolving turn (reply + next_action + suggested_subtasks)
+      // returns complete JSON rather than truncating mid-object.
+      maxTokens: 2048,
     });
 
     if (!result.ok) {
