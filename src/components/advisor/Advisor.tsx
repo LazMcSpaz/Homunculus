@@ -21,7 +21,9 @@ interface AdvisorResponse {
   new_questions?: string[];
 }
 
-const TIMEOUT_MS = 15000; // advisor timeout (design §7.1)
+const TIMEOUT_MS = 15000; // per-attempt timeout (design §7.1)
+// Backoff between automatic retries — ~9s of self-retrying before asking again.
+const RETRY_DELAYS = [1500, 3000, 4500];
 
 export default function Advisor({ taskId }: { taskId: string }) {
   const router = useRouter();
@@ -77,35 +79,46 @@ export default function Advisor({ taskId }: { taskId: string }) {
         messages: history,
       };
 
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-      try {
-        const res = await fetch('/api/advisor', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        });
-        clearTimeout(timer);
-        if (!res.ok) {
-          if (res.status === 503) setNotConfigured(true);
-          else setError(true);
-          return;
+      // One attempt. Returns the disposition so the caller can decide to retry.
+      const attempt = async (): Promise<'ok' | 'config' | 'fatal' | 'retry'> => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+        try {
+          const res = await fetch('/api/advisor', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
+          clearTimeout(timer);
+          if (res.status === 503) return 'config';
+          if (res.status === 400) return 'fatal';
+          if (!res.ok) return 'retry'; // 429 / 5xx / parse failure upstream
+          const data = (await res.json()) as AdvisorResponse;
+          setMessages((prev) => [...prev, { role: 'assistant', content: data.response_text }]);
+          await applyAdvisorOutcome(taskId, {
+            next_action: data.next_action,
+            suggested_subtasks: data.suggested_subtasks,
+            new_questions: data.new_questions,
+          });
+          if (data.session_state === 'resolved') setResolved(true);
+          return 'ok';
+        } catch {
+          clearTimeout(timer);
+          return 'retry'; // network error / timeout
         }
-        const data = (await res.json()) as AdvisorResponse;
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.response_text }]);
-        await applyAdvisorOutcome(taskId, {
-          next_action: data.next_action,
-          suggested_subtasks: data.suggested_subtasks,
-          new_questions: data.new_questions,
-        });
-        if (data.session_state === 'resolved') setResolved(true);
-      } catch {
-        clearTimeout(timer);
-        setError(true);
-      } finally {
-        setThinking(false);
+      };
+
+      // Auto-retry with backoff (~9s of waiting) before asking the user again.
+      let result = await attempt();
+      for (let i = 0; result === 'retry' && i < RETRY_DELAYS.length; i++) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS[i]));
+        result = await attempt();
       }
+
+      setThinking(false);
+      if (result === 'config') setNotConfigured(true);
+      else if (result !== 'ok') setError(true);
     },
     [task, profile, subtasks, taskId],
   );

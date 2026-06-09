@@ -33,7 +33,8 @@ interface ReviewResponse {
   profile_updates?: ProfileUpdate[];
 }
 
-const TIMEOUT_MS = 15000; // mirror advisor timeout (design §7.1)
+const TIMEOUT_MS = 15000; // per-attempt timeout (design §7.1)
+const RETRY_DELAYS = [1500, 3000, 4500]; // auto-retry backoff before asking again
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const OPENING = "Let's do my weekly review.";
 
@@ -148,30 +149,38 @@ export default function WeeklyReview() {
         messages: history,
       };
 
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-      try {
-        const res = await fetch('/api/weekly-review', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        });
-        clearTimeout(timer);
-        if (!res.ok) {
-          setError(true);
-          return;
+      const attempt = async (): Promise<'ok' | 'fatal' | 'retry'> => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+        try {
+          const res = await fetch('/api/weekly-review', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
+          clearTimeout(timer);
+          if (res.status === 400) return 'fatal';
+          if (!res.ok) return 'retry'; // 429 / 5xx / parse failure / no key (503)
+          const data = (await res.json()) as ReviewResponse;
+          setMessages((prev) => [...prev, { role: 'assistant', content: data.response_text }]);
+          await applyWriteBacks(data);
+          if (data.session_state === 'complete') setComplete(true);
+          return 'ok';
+        } catch {
+          clearTimeout(timer);
+          return 'retry';
         }
-        const data = (await res.json()) as ReviewResponse;
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.response_text }]);
-        await applyWriteBacks(data);
-        if (data.session_state === 'complete') setComplete(true);
-      } catch {
-        clearTimeout(timer);
-        setError(true);
-      } finally {
-        setThinking(false);
+      };
+
+      // Auto-retry with backoff before surfacing the manual retry prompt.
+      let result = await attempt();
+      for (let i = 0; result === 'retry' && i < RETRY_DELAYS.length; i++) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS[i]));
+        result = await attempt();
       }
+      setThinking(false);
+      if (result !== 'ok') setError(true);
     },
     [profile, allTasks, applyWriteBacks],
   );
